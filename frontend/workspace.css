@@ -30,3 +30,74 @@
 .follow.replied{background:#eef7f1;color:#2f7a5b}
 .follow.done{background:#f1f3f5;color:#5b6773}
 .matrix-table{table-layout:fixed;width:100%;min-width:560px}.matrix-table th,.matrix-table td{vertical-align:top;padding:14px 12px}.matrix-table tbody th{position:static;white-space:normal;overflow-wrap:anywhere;width:230px;text-transform:none;letter-spacing:0;font-size:15px;font-weight:600;line-height:1.45;color:#4f5c6e;background:#fbfafd}.matrix-table thead th{white-space:normal;overflow-wrap:anywhere}.matrix-table th small{display:block;font-weight:400;color:#6B7280;font-size:14px;line-height:1.45;margin-top:5px;text-transform:none;letter-spacing:0}.matrix-table td small{display:block;color:#6B7280;font-size:14px;line-height:1.45;margin-top:6px}.matrix-track{height:6px;border-radius:4px;background:#efecf6;margin:9px 0 2px;overflow:hidden}.matrix-track i{display:block;height:100%;border-radius:4px;background:#8d7fd4}.criteria-leader .matrix-track i{background:#5fae8b}.checklist-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px}.checklist-head .chat-label{margin:0}.checklist-head .small-button{flex-shrink:0}.vendor-cell.cheapest{background:#f0faf5}.vendor-cell.cheapest .price-button{color:#2f7a5b;font-weight:700}.vendor-cell.cheapest:after{content:'cheapest';display:block;margin-top:5px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#347754}.thread-entry{opacity:.72;border-bottom:1px solid #eee9f3;padding-bottom:18px;margin-bottom:22px}.thread-entry:hover{opacity:1}.analysis-conversation{scroll-behavior:smooth}
+
+/* ── Identity ───────────────────────────────────────────────────────────────
+   A dark rail, a warm canvas and one confident accent. Light text always
+   declares the dark surface it sits on, so the contrast audit can see it. */
+:root{--ink:#171B26;--deep:#141824;--paper:#F7F5F2;--line:#E6E2DA;
+ --accent:#5B46DE;--accent-deep:#4733C4;--accent-soft:#EFECFD;--muted:#5F6675}
+body{background:var(--paper)}
+
+.sidebar{background:var(--deep);border-right:0}
+.brandmark{background:#211E45;color:#9C8BFF;border-radius:13px}
+.brandmark svg{width:26px;height:26px}
+.brand b{background:#141824;color:#F5F6FA}
+.brand span{background:#141824;color:#8C93A8}
+.navitem{background:#141824;color:#AEB5C8}
+.navitem:hover,.navitem.active{background:#5B46DE;color:#FFFFFF}
+.navitem.active span,.navitem:hover span{background:#5B46DE;color:#FFFFFF}
+.sidefoot{background:#141824;border-color:#262C3D;color:#9AA1B4}
+.sidefoot b{background:#141824;color:#EDEFF5}
+.sidefoot span{background:#141824;color:#8C93A8}
+.pulse{background:#5FD0A8}
+
+.topbar{background:#FFFDFB;border-bottom:1px solid var(--line)}
+.topbar h1{color:var(--ink)}
+.eyebrow{color:var(--accent-deep)}
+.section-hero h2{color:var(--ink)}
+.panel{border-color:var(--line)}
+.primary{background:#5B46DE;border-color:#5B46DE;color:#FFFFFF;box-shadow:0 4px 12px #5b46de2e}
+.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+
+/* ── The agent, and the conversation ─────────────────────────────────────── */
+.agent-mark{width:25px;height:25px;flex:none;color:var(--accent)}
+.agent-head{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.agent-head .chat-label{margin:0;color:var(--accent-deep)}
+
+.user-message{background:#141824;border:0;color:#F4F6FB;max-width:74%;
+ padding:14px 20px;border-radius:19px 19px 5px 19px;box-shadow:0 7px 20px #1418241f;line-height:1.45}
+.user-message p{margin:0}
+.user-message .attachment-chip{background:#262C3D;border-color:#39405B;color:#DCE0EC}
+.intake-assistant{background:#FFFFFF;border:1px solid var(--line);border-radius:19px;
+ box-shadow:0 4px 14px #1418240a;padding:19px 22px}
+
+.agent-thinking{display:flex;align-items:center;gap:13px;margin:18px 0;padding:16px 21px;
+ background:#FFFFFF;border:1px solid var(--line);border-radius:19px}
+.agent-thinking p{margin:0;font-size:14px;line-height:1.45;font-weight:400;color:var(--muted)}
+.thinking-dots{display:inline-flex;gap:5px;align-items:center}
+.thinking-dots i{width:6px;height:6px;border-radius:50%;background:var(--deep)}
+
+.welcome-symbol{background:var(--accent-soft);border-color:#DFD9FB;color:var(--accent)}
+.welcome-symbol svg{width:31px;height:31px}
+.composer{border-color:var(--line);border-radius:20px}
+.composer:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px #5b46de1f}
+
+/* ── Motion: the message rises, the mark arrives, the dots keep time ─────── */
+@keyframes msg-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes mark-pop{from{opacity:0;transform:scale(.4) rotate(-120deg)}to{opacity:1;transform:none}}
+@keyframes mark-turn{to{transform:rotate(360deg)}}
+@keyframes dot-lift{0%,70%,100%{transform:translateY(0);opacity:.3}35%{transform:translateY(-5px);opacity:1}}
+.just-arrived{animation:msg-rise .34s cubic-bezier(.22,.9,.3,1) both}
+.just-arrived .agent-mark{animation:mark-pop .44s cubic-bezier(.34,1.3,.5,1) both}
+.agent-thinking{animation:msg-rise .3s ease both}
+.agent-thinking .agent-mark{animation:mark-turn 3.4s linear infinite}
+.thinking-dots i{animation:dot-lift 1.25s ease-in-out infinite}
+.thinking-dots i:nth-child(2){animation-delay:.16s}
+.thinking-dots i:nth-child(3){animation-delay:.32s}
+@media(prefers-reduced-motion:reduce){
+ .just-arrived,.just-arrived .agent-mark,.agent-thinking,
+ .agent-thinking .agent-mark,.thinking-dots i{animation:none}}
+/* The card lost a paragraph; it should not keep the empty room. */
+.welcome-card{min-height:250px;padding:44px 40px 34px}
+/* A bubble is the size of what was said, not the size of the column. */
+.user-message{width:fit-content;margin-left:auto}
