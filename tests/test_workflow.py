@@ -155,3 +155,36 @@ def test_source_paths_and_truth_not_public(client):
     eid=repo.read()['vendors']['packright']['facts'][0]['evidence_id']
     assert client.get('/api/evidence/'+eid+'/source').status_code==200
     assert client.post('/api/workflow',json={'action':'resume'},headers={'Origin':'https://malicious.example'}).status_code==403
+
+# A TLS-terminating proxy (Railway, Render, Fly) forwards to the container over plain
+# HTTP. Comparing whole URLs made the browser's https origin look cross-site, so every
+# write — including attaching a requirement sheet — came back 403.
+PROXIED = {'origin': 'https://source-pilot.up.railway.app', 'host': 'source-pilot.up.railway.app'}
+
+def test_writes_survive_a_tls_terminating_proxy(client):
+    assert client.post('/api/intake/start', json={'mode': 'demo'}, headers=PROXIED).status_code == 200
+
+def test_writes_survive_a_forwarded_host(client):
+    headers = {'origin': 'https://source-pilot.up.railway.app', 'host': 'container.internal:8080',
+               'x-forwarded-host': 'source-pilot.up.railway.app'}
+    assert client.post('/api/intake/start', json={'mode': 'demo'}, headers=headers).status_code == 200
+
+def test_a_genuine_cross_site_write_is_still_refused(client):
+    headers = {'origin': 'https://evil.example.com', 'host': 'source-pilot.up.railway.app'}
+    r = client.post('/api/intake/start', json={'mode': 'demo'}, headers=headers)
+    assert r.status_code == 403 and 'Cross-origin' in r.json()['detail']
+
+def test_a_requirement_sheet_uploads_through_the_proxy(client):
+    import io, openpyxl
+    client.post('/api/intake/start', json={'mode': 'custom'}, headers=PROXIED)
+    book = openpyxl.Workbook(); sheet = book.active
+    sheet.append(['SKU', 'Description', 'Annual quantity', 'Unit'])
+    sheet.append(['RSC-001', 'Regular slotted carton 400x300x200', 12000, 'piece'])
+    sheet.append(['RSC-002', 'Regular slotted carton 600x400x300', 8000, 'piece'])
+    buffer = io.BytesIO(); book.save(buffer)
+    r = client.post('/api/intake/attach', data={'prompt': 'Here are the lines we need.'},
+                    files={'files': ('requirement.xlsx', buffer.getvalue(),
+                                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')},
+                    headers=PROXIED)
+    assert r.status_code == 200, r.text
+    assert len(r.json()['items']) == 2

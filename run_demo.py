@@ -19,4 +19,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.prompt_key:
         os.environ['GOOGLE_API_KEY'] = getpass.getpass('Google API key (hidden, runtime only): ')
-    uvicorn.run("backend.app.main:app", host=args.host, port=args.port, reload=False, access_log=False)
+    # Behind a platform proxy the container is only reachable through that proxy, so
+    # its X-Forwarded-* headers are the truth about scheme and host.
+    behind_proxy = bool(os.getenv('PORT'))
+    uvicorn.run("backend.app.main:app", host=args.host, port=args.port, reload=False, access_log=False,
+                proxy_headers=True,
+                forwarded_allow_ips=os.getenv('FORWARDED_ALLOW_IPS', '*' if behind_proxy else '127.0.0.1'))

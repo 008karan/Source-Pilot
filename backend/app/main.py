@@ -10,6 +10,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, ConfigDict
 from . import repository as repo, pipeline, graph, jobs, intake, intake_docs, insights, knowledge, dossier
 from .ai import draft_rfx, has_ai, interpret_scenario, ai_extract_text, transcribe_audio, MODEL
@@ -26,11 +27,23 @@ async def not_found(request,exc):return JSONResponse(status_code=404,content={'d
 @app.exception_handler(RuntimeError)
 async def unavailable(request,exc):return JSONResponse(status_code=503,content={'detail':str(exc)})
 
+def site_host(value:str)->str:
+    """The host a URL belongs to, without scheme, credentials or default port."""
+    netloc=urlsplit(value).netloc or value
+    host=netloc.rsplit('@',1)[-1].strip().lower()
+    return re.sub(r':(?:80|443)$','',host)
+
 @app.middleware('http')
 async def local_writes(request:Request,call_next):
     origin=request.headers.get('origin')
-    if request.method not in {'GET','HEAD','OPTIONS'} and origin and origin != str(request.base_url).rstrip('/'):
-        return JSONResponse(status_code=403,content={'detail':'Cross-origin writes are disabled.'})
+    if request.method not in {'GET','HEAD','OPTIONS'} and origin:
+        # Compare hosts, not whole URLs. A platform proxy terminates TLS and forwards
+        # over plain HTTP, so the browser says https and the app sees http; that scheme
+        # mismatch is the proxy's doing, not a cross-site write.
+        forwarded=(request.headers.get('x-forwarded-host') or '').split(',')[0]
+        expected=forwarded or request.headers.get('host') or str(request.base_url)
+        if site_host(origin)!=site_host(expected):
+            return JSONResponse(status_code=403,content={'detail':'Cross-origin writes are disabled.'})
     response=await call_next(request)
     response.headers['X-Content-Type-Options']='nosniff'
     if request.url.path.startswith('/assets/'):
