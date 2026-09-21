@@ -55,7 +55,7 @@ def connect():
 
 def blank_rfx():
     """A first open starts on an empty request: no event, no lines, no suppliers."""
-    return {'event_id': 'RFQ-' + uuid4().hex[:8].upper(), 'title': '', 'category': '', 'buyer': 'Priya Menon',
+    return {'event_id': 'RFQ-' + uuid4().hex[:8].upper(), 'title': '', 'category': '', 'buyer': 'Karan Purohit',
             'currency': 'INR', 'comparison_uom': 'piece', 'bid_due_date': '', 'expected_annual_spend_inr': 0,
             'scope': '', 'baseline_available': False,
             'commercial_rules': {'comparison_basis': 'landed_cost_excluding_gst', 'fx_rate_usd_inr': 83.2,
@@ -86,7 +86,7 @@ def demo_offers_match(rfx):
 def initial():
     return {'dataset_version': 1, 'rfx': blank_rfx(), 'rfx_status': 'draft', 'rfx_version': 1,
             'draft': None, 'workflow_id': None, 'stage': 'draft', 'vendors': {}, 'evidence':{}, 'comparison':[],
-            'exceptions':[], 'clarifications':[]}
+            'exceptions':[], 'clarifications':[], 'award_scenarios':[], 'award': None}
 
 def read(version=None):
     with connect() as db:

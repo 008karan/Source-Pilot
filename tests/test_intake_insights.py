@@ -128,7 +128,10 @@ def test_attachment_maps_sheet_onto_checklist(client,tmp_path):
     assert client.get('/api/intake/documents/0').status_code==200
     assert client.get('/api/intake/documents/7').status_code==404
     # The header follows the buyer's own words, and confirmation is still explicit.
-    assert client.get('/api/event').json()['title'].startswith('We need to refresh office seating')
+    # The header carries a short topic, not the buyer's whole sentence.
+    title = client.get('/api/event').json()['title']
+    assert 'office seating' in title.lower() and len(title.split()) <= 6
+    assert not title.lower().startswith('we need')
     assert client.post('/api/intake/share',json={}).status_code==422
     assert client.post('/api/intake/save',json={'fields':{},'confirm':True}).status_code==200
     assert client.post('/api/intake/share',json={}).status_code==200

@@ -1,12 +1,13 @@
 """Category-independent, buyer-confirmed intake. No invented supplier history."""
 import copy
+import hashlib
 import json
 import math
 import re
 from pathlib import Path
 from uuid import uuid4
 from . import intake_docs, repository as repo
-from .ai import has_ai, _structured_response
+from .ai import has_ai, _structured_response, name_event
 
 FIELDS = {
     'scope': ('Purpose & scope', 'What goods or services do you need, and what outcome should they deliver?'),
@@ -83,16 +84,59 @@ def start(mode):
     repo.change('intake_started','buyer',mutate)
     return view()
 
+# The sentence a buyer types opens with paperwork; a title should start at the subject.
+LEAD_IN=re.compile(r"^(?:the\s+)?(?:supply(?:\s*[,&]?\s*(?:and\s+)?(?:delivery|installation|commissioning|support|maintenance))*"
+                   r"\s+(?:of|for)|provision\s+of|procurement\s+of|purchase\s+of|purchasing\s+of|sourcing\s+(?:of|for)|"
+                   r"requirements?\s+for|request\s+for\s+\w+\s+for|rf[qpix]\s+for|tender\s+for|quotation\s+for|"
+                   r"we\s+(?:need|want|require|are\s+looking\s+for)(?:\s+to)?|i\s+(?:need|want|require)(?:\s+to)?|looking\s+for|"
+                   r"need\s+to\s+(?:buy|procure|source|purchase))\s+",re.I)
+FILLER=re.compile(r'^(?:a|an|the|some|new|our)\s+',re.I)
+# "a vendor to provide X" is still paperwork; the subject is X.
+AGENT_LEAD=re.compile(r'^(?:a|an|the)?\s*(?:vendor|supplier|partner|contractor|agency)\s+'
+                      r'(?:who\s+can\s+|to\s+)?(?:provide|supply|deliver|handle|manage)\s+',re.I)
+# A title should not end mid-phrase.
+TRAILING=re.compile(r'\s+(?:for|to|of|and|or|with|from|in|at|on|by|the|a|an|our|across|per)$',re.I)
+
+def short_title(scope,category=''):
+    """A readable topic when no model is reachable: the subject, up to six words."""
+    text=re.sub(r'\s+',' ',(scope or '').strip())
+    if not text:return (category or '').strip()[:70]
+    text=LEAD_IN.sub('',text,count=1)
+    # Stop at the first aside: a bracket, a clause break, or a new sentence.
+    text=re.split(r'\s*[(\[]|\s+[-\u2013\u2014]\s+|[.;:]\s|,\s*(?:with|including|to be|for delivery)\b',text,1)[0]
+    text=AGENT_LEAD.sub('',text.strip(' ,.;:-'),count=1).strip()
+    words=text.split()
+    if len(words)>6:
+        text=' '.join(words[:6])
+    text=text.rstrip(' ,.;:-')
+    # A cut that lands inside a prepositional phrase should drop the phrase, not keep half of it.
+    words=text.split()
+    joins={'for','to','of','and','or','with','from','in','at','on','by','across','per','under','over'}
+    for i in range(len(words)-1,max(len(words)-3,0)-1,-1):
+        if words[i].lower() in joins:
+            words=words[:i];break
+    text=' '.join(words).rstrip(' ,.;:-')
+    for _ in range(3):
+        trimmed=TRAILING.sub('',text)
+        if trimmed==text:break
+        text=trimmed
+    if not text:return (category or '').strip()[:70]
+    lead=FILLER.sub('',text) or text
+    return (lead[0].upper()+lead[1:])[:70]
+
 def sync_header(d):
-    """The event header follows the buyer's own words as soon as scope is captured."""
+    """The event header carries a topic, not the first hundred characters of a sentence."""
     value=d.get('intake') or {};fields=value.get('fields') or {}
     if value.get('mode')=='demo' or d['rfx_status']=='approved':return
     scope=(fields.get('scope') or '').strip()
-    if scope:
-        title=scope[:100]
-        if len(scope)>100:title=title[:title.rstrip().rfind(' ')].rstrip(' ,.;:-')+'…'
-        d['rfx'].update(title=title,scope=scope)
     category=(fields.get('category') or '').strip()
+    if scope:
+        stamp=hashlib.sha256(f'{scope}|{category}'.encode()).hexdigest()[:12]
+        if d['rfx'].get('title_stamp')!=stamp:
+            sample='; '.join(str(i.get('description') or '') for i in (value.get('items') or [])[:6])
+            title=name_event(scope,category,sample) or short_title(scope,category)
+            d['rfx'].update(title=title,title_stamp=stamp)
+        d['rfx']['scope']=scope
     if category:d['rfx']['category']=category[:80]
 
 def validate_items(items):
@@ -120,10 +164,17 @@ def save(fields,items=None,confirm=False,expected_version=None):
         if items is not None:
             if value['mode']=='demo' and items!=value['items']:value['mode']='custom'
             value['items']=items
+        was=value.get('confirmed')
         value['confirmed']=False
         if confirm:
             if view(d)['missing']:raise ValueError('Complete every checklist item and at least one requirement line before confirming')
             value['confirmed']=True
+            if not was:
+                lines=len(value.get('items') or [])
+                value['messages'].append({'role':'user','text':'Confirmed — these details are correct.'})
+                value['messages'].append({'role':'assistant','text':
+                    f"Locked in. {lines} line{'' if lines==1 else 's'} and every checklist answer are set. "
+                    "Shall I find suppliers for this and share it?"})
         sync_header(d)
     repo.change('intake_confirmed' if confirm else 'intake_updated','buyer',mutate,expected_version)
     return view()
@@ -296,6 +347,12 @@ def share():
         d['draft']=None
         r['confirmed_intake']=copy.deepcopy(i)
         i.update(shared=True,dispatch=dispatch)
+        found=len(dispatch.get('suppliers') or [])
+        i['messages'].append({'role':'assistant','text':
+            (f"Shared with {found} matching supplier{'' if found==1 else 's'}. "
+             "I'll bring their responses into the next screen as they arrive.") if found else
+            ("No supplier in the local directory matches this category yet. "
+             "Add their responses yourself on the next screen.")})
         d.update(rfx_status='approved',approved_by=r.get('buyer') or 'Buyer',approved_at=repo.now(),stage='collecting_responses')
         if not d.get('workflow_id'):d['workflow_id']=str(uuid4())
         # Matched suppliers are recorded on the dispatch, not created as empty inbox cards.

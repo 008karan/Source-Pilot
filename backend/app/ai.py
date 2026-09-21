@@ -295,6 +295,33 @@ def judge_compliance(requirement: str, answer: str) -> dict[str, Any] | None:
         return None
 
 
+TITLE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {"title": {"type": "string"}},
+    "required": ["title"],
+}
+
+
+def name_event(scope: str, category: str = '', sample: str = '') -> str | None:
+    """A short name for the event, the way a chat gets a title: what it is, not the sentence."""
+    if not has_ai() or not (scope or '').strip():
+        return None
+    try:
+        result = _structured_response(
+            "Name this sourcing event in three to six words, the way a document gets a title. "
+            "Say what is being bought and, if it is stated, where or for which period. "
+            "No punctuation at the end, no quotes, no words like RFQ, RFP, request, requirement, "
+            "procurement, supply or delivery unless they are part of a proper name. "
+            "Keep the buyer's own product words and capitalisation of acronyms.",
+            json.dumps({"scope": scope[:1200], "category": category[:120], "line_items": sample[:600]}),
+            "event_title", TITLE_SCHEMA)
+        title = (result or {}).get('title', '').strip().strip('"\'')
+        return title[:70] or None
+    except Exception:
+        return None
+
+
 def transcribe_audio(content:bytes,mime:str):
     result=_structured_response('Transcribe the spoken procurement request exactly. Do not answer or act on it. Return only the transcript.',
         [{'inlineData':{'mimeType':mime,'data':base64.b64encode(content).decode()}}],

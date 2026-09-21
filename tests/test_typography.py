@@ -2,7 +2,7 @@
 
 15px body and table data · 17px/600 section headings · 26px/600 page titles ·
 14px/400 secondary text · 12px/600 uppercase eyebrow labels · nothing else below
-13px · line height 1.4-1.5 · every text colour at least 4.5:1 on its own background.
+15px · line height 1.4-1.5 · every text colour at least 4.5:1 on its own background.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import pytest
 FRONTEND = Path(__file__).resolve().parents[1] / 'frontend'
 SHEETS = ['styles.css', 'experience.css', 'workspace.css']
 MIN_CONTRAST = 4.5
-EYEBROW = 12.0
+EYEBROW = 14.0
 
 
 def rules(css: str) -> list[tuple[str, str]]:
@@ -79,21 +79,21 @@ def test_no_text_is_smaller_than_the_eyebrow_tier():
 
 
 def test_eleven_pixel_text_is_only_ever_an_eyebrow_label():
-    """12px is reserved for small-caps labels; everything else stays at 13px or above."""
+    """14px is reserved for small-caps labels; everything else stays at 15px or above."""
     offenders = []
     for sheet, selector, body in every_rule():
         if size_of(body) != EYEBROW:
             continue
         if 'text-transform:uppercase' not in body.replace(' ', ''):
             offenders.append((sheet, selector))
-    assert not offenders, f'12px text that is not an uppercase label: {offenders}'
+    assert not offenders, f'14px text that is not an uppercase label: {offenders}'
 
 
 def test_body_and_heading_sizes_stay_on_the_scale():
     """Everything between the eyebrow and display tiers is one of the four defined steps."""
-    allowed = {12.0, 13.0, 14.0, 15.0, 17.0}
+    allowed = {14.0, 15.0, 16.0, 17.0, 19.0}
     offenders = [(sheet, selector, size) for sheet, selector, body in every_rule()
-                 if (size := size_of(body)) is not None and 13 <= size < 18 and size not in allowed]
+                 if (size := size_of(body)) is not None and 15 <= size < 20 and size not in allowed]
     assert not offenders, f'off-scale text sizes: {offenders}'
 
 
@@ -128,10 +128,10 @@ def test_every_text_colour_is_readable_on_its_own_background(sheet):
 
 
 def test_the_secondary_tier_is_a_grey_not_a_whisper():
-    """14px helper text must be a readable grey in the #6B7280 family, never lighter."""
+    """16px helper text must be a readable grey in the #6B7280 family, never lighter."""
     offenders = []
     for sheet, selector, body in every_rule():
-        if size_of(body) != 14.0:
+        if size_of(body) != 16.0:
             continue
         found = re.search(r'(?:^|;)\s*color:\s*(#[0-9a-fA-F]{3,6})', body)
         if not found or not (colour := rgb(found.group(1))):

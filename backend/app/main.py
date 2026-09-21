@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, ConfigDict
-from . import repository as repo, pipeline, graph, jobs, intake, intake_docs, insights, knowledge, dossier
+from . import repository as repo, pipeline, graph, jobs, intake, intake_docs, insights, knowledge, dossier, award
 from .ai import draft_rfx, has_ai, interpret_scenario, ai_extract_text, transcribe_audio, MODEL
 from .scenario import solve_scenario, ValidatedSpec
 from .store import ROOT, DATA_DIR
@@ -69,7 +69,7 @@ class IntakeSave(BaseModel):
 class WorkflowRequest(BaseModel):
     action:Literal['start','resume','retry']
     approved:bool=False
-    actor:str=Field(default='Priya Menon',min_length=1,max_length=100)
+    actor:str=Field(default='Karan Purohit',min_length=1,max_length=100)
     use_ai:bool=True
 class Resolve(BaseModel):
     model_config=ConfigDict(extra='forbid',allow_inf_nan=False)
@@ -82,7 +82,7 @@ class Resolve(BaseModel):
     clarification_id:str|None=None
 class Clarification(BaseModel):
     action:Literal['draft','send','reply']
-    actor:str=Field(default='Priya Menon',min_length=1,max_length=100)
+    actor:str=Field(default='Karan Purohit',min_length=1,max_length=100)
     text:str=Field(default='',max_length=10000)
     clarification_id:str|None=None
 
@@ -244,6 +244,7 @@ def award_allocation(request,question):
     return {'kind':'matrix','axis':'allocation','metric':'cost','suppliers':suppliers,'rows':rows,
             'title':request.get('headline') or f'{label}: line allocation','text':text,'segments':{},
             'compared_lines':sorted(awarded),'total_lines':len(data['rfx']['items']),
+            'scenario_id':result['id'],'awardable':True,
             'dataset_version':result['dataset_version']}
 
 def compare_awards(request,question,allocations=True):
@@ -316,6 +317,40 @@ def analysis(req:Ask):
     if visual:return _remember(req,visual)
     result=ask(req)
     return _remember(req,{'kind':'award','scenario':result,'chart':'pie' if 'pie' in req.question.lower() else 'bar'})
+class SaveScenario(BaseModel):
+    model_config=ConfigDict(extra='ignore')
+    scenario_id:str=Field(min_length=1,max_length=80)
+    name:str=Field(default='',max_length=80)
+class ConfirmAward(BaseModel):
+    model_config=ConfigDict(extra='ignore')
+    scenario:str=Field(min_length=1,max_length=120)
+    actor:str=Field(default='',max_length=80)
+
+@app.get('/api/award')
+def award_view():return award.view()
+
+@app.post('/api/award/scenarios')
+def award_save(req:SaveScenario):
+    """Keep an analysis run as a named award scenario. Nothing is recalculated."""
+    result=repo.scenario(req.scenario_id)
+    if not result:raise ValueError('That analysis result is no longer available.')
+    if result.get('status')!='ok':raise ValueError(result.get('reason') or 'That result has no feasible allocation.')
+    data=repo.read()
+    name=(req.name or '').strip() or award.title_for(data,result)
+    return award.save(award.from_solver(data,result,name))
+
+@app.delete('/api/award/scenarios/{scenario_id}')
+def award_forget(scenario_id:str):
+    award.remove(scenario_id);return award.view()
+
+@app.post('/api/award/confirm')
+def award_confirm(req:ConfirmAward):
+    return award.confirm(req.scenario,(req.actor or '').strip() or repo.read()['rfx']['buyer'])
+
+@app.post('/api/award/clear')
+def award_clear():
+    award.revoke(repo.read()['rfx']['buyer']);return award.view()
+
 @app.post('/api/rfx/draft')
 def draft(req:Draft):
     d=repo.read();r=d['rfx']
