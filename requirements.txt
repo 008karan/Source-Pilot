@@ -1,0 +1,16 @@
+fastapi>=0.110
+uvicorn[standard]
+pydantic>=2
+numpy
+scipy>=1.11
+openpyxl
+python-docx
+pdfplumber
+reportlab
+pillow
+langgraph==1.2.11
+langgraph-checkpoint-sqlite==3.1.1
+python-multipart
+jsonschema
+httpx
+pytest

@@ -1,0 +1,23 @@
+[project]
+name = "aerchain-sourcing-decision-room"
+version = "0.2.0"
+description = "Evidence-backed AI procurement sourcing prototype"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]",
+  "pydantic>=2",
+  "numpy",
+  "scipy>=1.11",
+  "openpyxl",
+  "python-docx",
+  "pdfplumber",
+]
+
+[project.optional-dependencies]
+workflow = ["langgraph"]
+docling = ["docling"]
+demo = ["reportlab", "pillow"]
+
+[tool.ruff]
+line-length = 110

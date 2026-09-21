@@ -1,0 +1,27 @@
+# local runtime
+.venv/
+venv/
+runtime/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.sqlite*
+.DS_Store
+
+# secrets — never commit; see .env.example
+.env
+
+# development artefacts, not needed to run the platform
+_qa/
+docs/
+evaluation/
+evaluation-gemini/
+evaluation-gemini-updated/
+evaluation-intake/
+evaluation-offline/
+evaluate.py
+verify_demo.py
+scripts_generate_demo.py
+requirements-snapshot.txt
+requirements-workflow-optional.txt

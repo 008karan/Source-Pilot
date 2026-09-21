@@ -1,0 +1,49 @@
+{
+  "event": "RFX-CORR-2027-001",
+  "files": [
+    {
+      "vendor": "Buyer RFx",
+      "file": "buyer_rfx_reference.xlsx",
+      "purpose": "Canonical 30-line RFx, baseline and questionnaire"
+    },
+    {
+      "vendor": "PackRight Industries",
+      "file": "vendor_a_packright_offer.xlsx",
+      "purpose": "Nonstandard Excel; mixed per-piece and per-100-piece basis"
+    },
+    {
+      "vendor": "CorrPro International",
+      "file": "vendor_b_corrpro_quote.pdf",
+      "purpose": "USD PDF; 3% conditional rebate buried in footnote"
+    },
+    {
+      "vendor": "BoxWorks India Pvt Ltd",
+      "file": "vendor_c_boxworks_offer.docx",
+      "purpose": "Word quote; 27/30 lines; per-carton pricing; freight extra; certificate issue"
+    },
+    {
+      "vendor": "AlphaPack Solutions",
+      "file": "vendor_d_alphapack_rate_card_photo.jpg",
+      "purpose": "Angled phone photo; bundle units; one obscured price; failed FSC"
+    },
+    {
+      "vendor": "GreenCarton Co.",
+      "file": "vendor_e_greencarton_reply.eml",
+      "purpose": "Terse email; INR/kg; same-as-last-year references; freight 2%"
+    }
+  ],
+  "designed_edge_cases": [
+    "arbitrary supplier formats",
+    "USD vs INR",
+    "per 100 pieces vs per carton vs per bundle vs per kg",
+    "partial quote 27/30",
+    "missing lines must not become zero",
+    "freight included vs extra",
+    "conditional rebate in footnote",
+    "quality pass/fail/pending",
+    "certificate expiry",
+    "angled/low-confidence photo",
+    "same-as-last-year reference",
+    "evidence/provenance per normalized value"
+  ]
+}
