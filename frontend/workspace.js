@@ -34,7 +34,8 @@ renderResponses=function(){supplierResponses();const root=$('#view-responses');
  const load=root.querySelector('[data-action="demoMessages"]');
  if(!demoEvent)load.remove();
  else{load.disabled=!released;if(!released)load.title='Approve and share your RFx first.'}
- root.querySelector('[data-action="processAll"]').textContent='Extract information →';};
+ const extract=root.querySelector('[data-action="processAll"]');
+ if(extract)extract.textContent='Extract information →';};
 function newProposal(){openDrawer(`<div class="eyebrow">ADD A SUPPLIER PROPOSAL</div><h2>The original offer, in their own words.</h2><p>Add as many suppliers as you need. Their proposal joins the same evidence and review workflow.</p><form id="proposalForm"><label class="field">Supplier name<input name="supplier_name" maxlength="160" required placeholder="Supplier company name"></label><label class="field">Email ID<input name="email" type="email" required placeholder="quotes@supplier.com"></label><label class="field">Subject<input name="subject" value="Supplier proposal"></label><label class="field">Message body<textarea name="body" rows="7" placeholder="Paste the supplier’s email, including prices, delivery, freight and qualification answers…"></textarea></label><label class="drop-zone">Attachments<input name="files" type="file" multiple accept=".xlsx,.docx,.pdf,.eml,.txt,.jpg,.jpeg,.png,.webp"><span>Up to 5 files · 12 MB each · 24 MB total. A message or attachment is required.</span></label><div class="actions"><button class="secondary" type="submit" value="save">Add to inbox</button><button class="primary" type="submit" value="extract">Add & extract information →</button></div><p class="fine-print">Live interpretation sends proposal content to the configured AI service. Nothing is emailed to the supplier.</p></form>`)}
 function criteriaTable(){const o=overviewData;if(!o?.suppliers.length)return '<div class="panel"><h3>Your comparison will appear here.</h3><p>Add supplier proposals and extract their information first.</p></div>';const rows=[['cost','Best comparable quote','Same lines, every response · green marks a qualified leader',v=>v.cost==null?'Not comparable':money(v.cost)],['delivery','Fastest comparable delivery','Slowest line lead time · lower is better',v=>v.delivery==null?'Not available':v.delivery+' days'],['quality','Meets mandatory requirements','Declared qualification · gates the award, not the price',v=>v.processed?({pass:'Meets requirements',pending:'Needs review',fail:'Does not qualify'}[v.quality]):'Not extracted'],['coverage','Most complete usable offer','Usable prices · higher is better',v=>v.processed?`${v.coverage} / ${v.total_lines} lines`:'Not extracted'],['past_deals','Previous-deal performance','Past quality and delivery reliability',()=> 'No records connected']];
  const termRows=(o.term_rows||[]).map(r=>[r.key,r.label,r.graded?'Ranked against the other responses':'Stated by the supplier in their own response',
@@ -63,9 +64,19 @@ function animateDetails(details){
   }
  });
 }
-renderCompare=function(){detailedCompare();const root=$('#view-compare');root.querySelector('.section-hero').insertAdjacentHTML('afterend',criteriaTable());const layout=root.querySelector('.compare-layout');const table=layout?.querySelector(':scope > .panel');if(table){const details=document.createElement('details');details.className='normalized-details';details.innerHTML='<summary>Explore detailed normalized prices & source evidence</summary>';table.before(details);details.append(table);animateDetails(details)}};
+renderCompare=function(){
+ if(!state.comparison?.length){
+  $('#view-compare').innerHTML=hero('03 / REVIEW WITH CONFIDENCE','Know what you can trust.',
+   'Every supplier price gets one comparable basis, with its source one click away.')+waitingFor('compare');
+  return}
+ detailedCompare();const root=$('#view-compare');root.querySelector('.section-hero').insertAdjacentHTML('afterend',criteriaTable());const layout=root.querySelector('.compare-layout');const table=layout?.querySelector(':scope > .panel');if(table){const details=document.createElement('details');details.className='normalized-details';details.innerHTML='<summary>Explore detailed normalized prices & source evidence</summary>';table.before(details);details.append(table);animateDetails(details)}};
 const analysisBase=renderAnalysis;
-renderAnalysis=function(){analysisBase();if(visualAnswer)renderVisual(visualAnswer);};
+renderAnalysis=function(){
+ if(!state.comparison?.length){
+  $('#view-analysis').innerHTML=hero('04 / FIND YOUR AWARD','Ask the next “what if”.',
+   'Explore supplier splits, delivery limits and cost, once there is reviewed data to ask about.')+waitingFor('analysis');
+  return}
+ analysisBase();if(visualAnswer)renderVisual(visualAnswer);};
 const scenarioBase=renderScenario;
 renderScenario=function(s){visualAnswer=null;scenarioBase(s);const root=$('#scenarioResult');if(s.status!=='ok')return;const table=root.querySelector('.table-wrap');if(table){const detail=document.createElement('details');detail.className='allocation-details';detail.innerHTML='<summary>Inspect line-level allocations and evidence</summary>';table.before(detail);detail.append(table)}const mix=root.querySelector('.mix-row');if(mix){mix.insertAdjacentHTML('beforebegin',`<div class="chart-heading"><h3>Award spend by supplier</h3><div>${button('Bars','awardChart','data-chart="bar"','small-button')}${button('Pie','awardChart','data-chart="pie"','small-button')}</div></div><div id="awardChart">${awardChart(s,preferredChart)}</div>`);root.querySelectorAll('.mix-row').forEach(x=>x.remove())}const label=root.querySelector('.panel-head p');if(label){label.textContent=`Data v${s.dataset_version} · ${s.stale?'Needs recomputing':'Current'} · Calculated award`;label.title='The immutable snapshot of your reviewed data this award was calculated from'}};
 const colors=['#6d78d8','#7bc7ab','#f0ba78','#ad94d3','#82bed4','#cc8f9d'];

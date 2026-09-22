@@ -330,3 +330,45 @@ body[data-view="analysis"] .analyst-composer{position:sticky;bottom:18px;margin:
  body[data-view="rfx"] .view.active,body[data-view="rfx"] .intake-layout{display:block}
  body[data-view="rfx"] .intake-stream{max-height:62vh}
 }
+
+/* ── An inbox with nothing in it ─────────────────────────────────────────── */
+.empty-inbox{background:#FFFFFF;border:1px solid var(--line);border-radius:20px;padding:28px 30px;margin:0 0 24px}
+.empty-inbox-head{display:flex;align-items:center;gap:17px;margin-bottom:24px}
+.empty-inbox-head .reading-orb{background:#EFECFD;color:#5B46DE}
+.empty-inbox-head h3{margin:0;font-size:19px;font-weight:600;line-height:1.4}
+.empty-inbox-head p{margin:7px 0 0;font-size:16px;line-height:1.45;color:#5F6675;font-weight:400;max-width:640px}
+.empty-inbox-formats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:11px;
+ padding-bottom:24px;border-bottom:1px solid var(--line)}
+.empty-inbox-formats>div{background:#FAF8F5;border:1px solid var(--line);border-radius:13px;padding:13px 15px}
+.empty-inbox-formats b{display:block;font-size:16px;font-weight:600;line-height:1.4;color:#171B26}
+.empty-inbox-formats small{display:block;margin-top:4px;font-size:15px;line-height:1.45;color:#5F6675}
+.empty-inbox-steps{list-style:none;counter-reset:instep;margin:22px 0 0;padding:0;
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
+.empty-inbox-steps li{position:relative;padding-left:38px}
+.empty-inbox-steps li:before{counter-increment:instep;content:counter(instep);position:absolute;left:0;top:-1px;
+ width:26px;height:26px;border-radius:50%;background:#141824;color:#FFFFFF;display:grid;place-items:center;
+ font-size:15px;font-weight:600;line-height:1.4}
+.empty-inbox-steps b{display:block;font-size:16px;font-weight:600;line-height:1.4;color:#171B26}
+.empty-inbox-steps span{display:block;margin-top:4px;font-size:15px;line-height:1.45;color:#5F6675}
+
+/* ── A screen that is waiting for something says so ──────────────────────── */
+.waiting-panel{background:#FFFFFF;border:1px solid var(--line);border-radius:20px;padding:28px 30px;max-width:760px}
+.waiting-head{display:flex;align-items:center;gap:17px;margin-bottom:24px}
+.waiting-head .reading-orb{background:#EFECFD;color:#5B46DE}
+.waiting-head h3{margin:0;font-size:19px;font-weight:600;line-height:1.4}
+.waiting-head p{margin:7px 0 0;font-size:16px;line-height:1.45;color:#5F6675;font-weight:400}
+.waiting-steps{list-style:none;margin:0;padding:22px 0 0;border-top:1px solid var(--line)}
+.waiting-steps li{display:flex;align-items:center;gap:13px;padding:10px 0;font-size:16px;line-height:1.45}
+.waiting-steps li i{width:21px;height:21px;flex:none;border-radius:50%;border:2px solid #D8D3CB;
+ display:grid;place-items:center}
+.waiting-steps li.done{color:#3F4756}
+.waiting-steps li.done i{border-color:#2F7A5B;background:#2F7A5B}
+.waiting-steps li.done i:after{content:"";width:5px;height:9px;border-right:2px solid #fff;
+ border-bottom:2px solid #fff;transform:rotate(45deg) translate(-1px,-1px)}
+.waiting-steps li.next{color:#171B26;font-weight:600}
+.waiting-steps li.next i{border-color:#5B46DE;border-top-color:transparent;animation:mark-turn 1.1s linear infinite}
+.waiting-steps li.next b{margin-left:auto;font-size:14px;font-weight:600;text-transform:uppercase;
+ letter-spacing:.05em;color:#4733C4;background:#EFECFD;border-radius:99px;padding:3px 10px}
+.waiting-steps li.pending{color:#5F6675;opacity:.5}
+.waiting-panel .next-step{margin:24px 0 0}
+@media(prefers-reduced-motion:reduce){.waiting-steps li.next i{animation:none}}

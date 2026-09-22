@@ -128,7 +128,7 @@ function renderAward(){
  const e=awardData.event;
  const meta=`${e.line_item_count} item${e.line_item_count===1?'':'s'} · ${e.supplier_count} supplier${e.supplier_count===1?'':'s'}${e.status?' · '+String(e.status).replace(/_/g,' '):''}`;
  const head=hero('05 / AWARD THE BUSINESS','Award Selection',`${esc(e.title||'Sourcing event')}${e.event_id?' · '+esc(e.event_id):''} — ${meta}`);
- if(!awardData.ready){view.innerHTML=head+`<div class="panel"><p>${esc(awardData.message||'Not ready yet.')}</p>${button('Back to responses','nextView','data-to="responses"','primary')}</div>`;return}
+ if(!awardData.ready){view.innerHTML=head+waitingFor('award');return}
  if(awardData.award){view.innerHTML=head+awardConfirmedPanel(awardData.award);return}
  const s=awardScenario();
  if(!s){view.innerHTML=head+'<div class="panel"><p>No eligible suppliers are available for award.</p></div>';return}

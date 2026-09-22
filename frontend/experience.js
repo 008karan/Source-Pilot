@@ -8,7 +8,7 @@ const next=(text,label,view)=>`<div class="next-step"><span>${text}</span>${butt
 const mic=target=>`<button class="voice-button" data-action="voice" data-target="${target}" aria-label="Record voice request" title="Record a request; Co-pilot transcribes it for your review">◉ <span>Voice</span></button>`;
 const tableLines=()=>`<div class="table-wrap"><table><thead><tr><th>SKU</th><th>Annual quantity</th><th>Specification</th></tr></thead><tbody>${state.rfx.items.map(i=>`<tr><td>${esc(i.sku)}</td><td>${i.annual_quantity.toLocaleString('en-IN')}</td><td>${esc(i.description)}</td></tr>`).join('')}</tbody></table></div>`;
 renderRfx=function(){const d=state.draft,r=state.rfx,released=state.rfx_status==='approved';$('#view-rfx').innerHTML=hero('01 / CREATE YOUR RFx','Start with what you need.','Describe the purchase. Review a structured brief. You decide when it goes out.')+`<div class="chat-workspace"><div class="chat-stream">${d?`<div class="user-message">${esc(d.buyer_summary)}</div><div class="assistant-message"><div class="assistant-avatar">a.</div><div class="assistant-content"><div class="chat-label">RFx co-pilot · ${esc(state.draft_mode==='gemini'?'Sourcing co-pilot':'offline template')}</div><h3>Your sourcing brief is ready to review.</h3><p>${esc(d.scope)}</p><div class="brief-metrics"><div><strong>30</strong><span>line items</span></div><div><strong>5</strong><span>suppliers</span></div><div><strong>${d.commercial_terms.quote_validity_days} days</strong><span>quote validity</span></div></div><div class="brief-detail"><details><summary>Scope & line items <span>30 baseline specifications</span></summary><p>${esc(d.line_item_strategy)}</p>${tableLines()}</details><details><summary>Quality requirements <span>8 reviewable rules</span></summary>${r.questionnaire.map(q=>`<p><b>${q.id}.</b> ${esc(q.question)} ${q.mandatory?'<span class="pill">Required</span>':''}</p>`).join('')}<p class="muted">Baseline qualification IDs are preserved. Co-pilot suggestions are advisory.</p></details><details><summary>Commercial terms <span>INR · landed · ex-GST</span></summary><p>Fixed buyer comparison FX: ₹${r.commercial_rules.fx_rate_usd_inr}/USD. Freight must be explicit. Conditional rebates are shown separately.</p><p>${esc(d.commercial_terms.freight_requirement)}</p></details><details><summary>Before you send <span>${d.buyer_review_points.length} review points</span></summary><ul>${d.buyer_review_points.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details></div>${released?`<div class="success-note">✓ Approved by ${esc(state.approved_by)}. Demo invitations released.</div>${next('Next: collect supplier replies.','Open response inbox','responses')}`:`<div class="approval-row"><span>Ready to invite the five demo suppliers?</span>${button('Approve & release RFx →','release','','primary')}</div><p class="fine-print">Delivery is simulated. No external email is sent.</p>`}</div></div>`:`<div class="welcome-card"><div class="welcome-symbol">✦</div><h3>A sourcing event, from a conversation.</h3><p>Use the 30-line corrugated packaging brief to start your demo. The co-pilot will prepare scope, questionnaire and terms.</p><div class="suggestions">${button('Use the packaging brief ↗','suggestRfx','','suggestion')}${button('View buyer reference','buyerReference','','suggestion')}</div></div>`}</div>${!released?`<div class="composer"><textarea id="rfxChat" aria-label="Describe your sourcing requirement" placeholder="Describe what you need to buy…">${!d?'Create the FY27 corrugated packaging RFx for Bengaluru and Hosur. Retain the 30 baseline items and quality gates. Compare landed costs in INR excluding GST. Quotes valid for 60 days.':''}</textarea><div class="composer-toolbar">${mic('rfxChat')}<span>Sourcing co-pilot · buyer approval required</span>${button(d?'Refine brief ↑':'Build my RFx ↑','composeRfx','','primary')}</div></div>`:''}</div>`;};
-renderResponses=function(){const vs=Object.values(state.vendors),received=vs.filter(v=>v.documents?.length).length,processed=vs.filter(v=>v.response_status==='processed').length;$('#view-responses').innerHTML=hero('02 / COLLECT & UNDERSTAND','Their format. Your clarity.','Paste an email, attach a quote, or load the five demo messages. Extraction starts only when you ask.',button('Load demo messages','demoMessages',state.rfx_status!=='approved'?'disabled':''))+`${state.rfx_status!=='approved'?next('First, build and approve your RFx.','Back to RFx','rfx'):''}<div class="inbox-toolbar"><div><b>${received} of ${vs.length} responses received</b><span>${processed} processed · Excel, PDF, Word, photo and email</span></div>${button('Extract & normalize →','processAll',(!received||activeJob?.status==='running')?'disabled':'','primary')}</div><div id="processingPanel">${processingHtml()}</div><div class="supplier-grid">${vs.map((v,i)=>{const open=state.exceptions.filter(e=>e.vendor_id===v.id&&e.status!=='resolved_by_buyer').length;return `<article class="supplier-card"><div class="supplier-top"><div class="supplier-avatar color-${i}">${esc(v.name.slice(0,1))}</div>${pill(v.response_status==='processed'?'processed':v.documents?.length?'received':'waiting')}</div><h3>${esc(v.name)}</h3><p class="muted">${esc(v.email||'Demo supplier')}</p><p class="supplier-format">${({xlsx:'Excel workbook',pdf:'PDF proposal',docx:'Word offer',jpg:'Phone photo',eml:'Email reply'})[v.format]||esc(v.format)}</p>${v.documents?.length?`<div class="message-preview"><b>${esc(v.subject||'Supplier quote')}</b><p>${esc(v.message?.slice(0,120)||'Supplier attachments received. Ready to read their original response.')}</p><button class="attachment-link" data-action="packet" data-id="${v.id}">▧ ${v.documents.length} source ${v.documents.length===1?'document':'documents'} ↗</button></div>`:'<div class="waiting-note">No response yet. Add the supplier’s message to begin.</div>'}${v.response_status==='processed'?`<div class="supplier-facts"><span><b>${v.facts.length}/${state.rfx.items.length}</b> line attempts</span><span>${pill(v.quality)}</span></div><button class="review-link" data-action="vendorReview" data-id="${v.id}">${open?open+' points need attention →':'Review extracted details →'}</button>`:''}<div class="supplier-actions">${button(v.documents?.length?'Replace message':'Add supplier response','receiveMessage',`data-id="${v.id}" ${state.rfx_status!=='approved'?'disabled':''}`)}${v.response_status==='processed'?button('Details','inspect',`data-id="${v.id}"`):''}</div></article>`}).join('')}</div>${processed?next('Responses are ready. Review uncertainty before choosing an award.','Review & compare →','compare'):''}`;};
+renderResponses=function(){const vs=Object.values(state.vendors),received=vs.filter(v=>v.documents?.length).length,processed=vs.filter(v=>v.response_status==='processed').length;$('#view-responses').innerHTML=hero('02 / COLLECT & UNDERSTAND','Their format. Your clarity.','Paste an email, attach a quote, or load the five demo messages. Extraction starts only when you ask.',button('Load demo messages','demoMessages',state.rfx_status!=='approved'?'disabled':''))+`${state.rfx_status!=='approved'?next('First, build and approve your RFx.','Back to RFx','rfx'):''}${vs.length?'':emptyInbox()}${vs.length?`<div class="inbox-toolbar"><div><b>${received} of ${vs.length} responses received</b><span>${processed} processed · Excel, PDF, Word, photo and email</span></div>${button('Extract & normalize →','processAll',(!received||activeJob?.status==='running')?'disabled':'','primary')}</div>`:''}<div id="processingPanel">${processingHtml()}</div><div class="supplier-grid">${vs.map((v,i)=>{const open=state.exceptions.filter(e=>e.vendor_id===v.id&&e.status!=='resolved_by_buyer').length;return `<article class="supplier-card"><div class="supplier-top"><div class="supplier-avatar color-${i}">${esc(v.name.slice(0,1))}</div>${pill(v.response_status==='processed'?'processed':v.documents?.length?'received':'waiting')}</div><h3>${esc(v.name)}</h3><p class="muted">${esc(v.email||'Demo supplier')}</p><p class="supplier-format">${({xlsx:'Excel workbook',pdf:'PDF proposal',docx:'Word offer',jpg:'Phone photo',eml:'Email reply'})[v.format]||esc(v.format)}</p>${v.documents?.length?`<div class="message-preview"><b>${esc(v.subject||'Supplier quote')}</b><p>${esc(v.message?.slice(0,120)||'Supplier attachments received. Ready to read their original response.')}</p><button class="attachment-link" data-action="packet" data-id="${v.id}">▧ ${v.documents.length} source ${v.documents.length===1?'document':'documents'} ↗</button></div>`:'<div class="waiting-note">No response yet. Add the supplier’s message to begin.</div>'}${v.response_status==='processed'?`<div class="supplier-facts"><span><b>${v.facts.length}/${state.rfx.items.length}</b> line attempts</span><span>${pill(v.quality)}</span></div><button class="review-link" data-action="vendorReview" data-id="${v.id}">${open?open+' points need attention →':'Review extracted details →'}</button>`:''}<div class="supplier-actions">${button(v.documents?.length?'Replace message':'Add supplier response','receiveMessage',`data-id="${v.id}" ${state.rfx_status!=='approved'?'disabled':''}`)}${v.response_status==='processed'?button('Details','inspect',`data-id="${v.id}"`):''}</div></article>`}).join('')}</div>${processed?next('Responses are ready. Review uncertainty before choosing an award.','Review & compare →','compare'):''}`;};
 // Extraction is the moment the product earns trust, so it should look like work:
 // the mark turns, the stage names change, each supplier reports its own progress.
 const READING_STAGES=['Reading the source files','Detecting each supplier\u2019s format',
@@ -30,6 +30,72 @@ function vendorProgress(stage){
  const hit=VENDOR_STEPS.findIndex(s=>name.includes(s));
  if(name.includes('complete')||name.includes('done')||name.includes('processed'))return 1;
  return hit<0?0.12:Math.max(0.12,hit/(VENDOR_STEPS.length-1));
+}
+// Nothing has arrived yet: say what arrives, how it gets here, and what happens next.
+const INBOX_FORMATS=[['Excel workbook','A priced line-item sheet'],['PDF proposal','A formatted commercial offer'],
+ ['Word offer','A letter with a price table'],['Photo of a rate card','Read with the vision model'],
+ ['Email reply','Prices written in the body']];
+// A screen with nothing on it should say what it is waiting for, and how far the
+// event has got. The same three gates drive Compare, Analysis and Award.
+function pipelineSteps(){
+ const vs=Object.values(state.vendors||{});
+ return [
+  ['RFx released to suppliers', state.rfx_status==='approved'],
+  ['Supplier responses received', vs.some(v=>v.documents?.length)],
+  ['Responses extracted and normalized', !!state.comparison?.length],
+ ];
+}
+function waitingPanel(title,note,action=''){
+ const steps=pipelineSteps();
+ const next=steps.findIndex(([,done])=>!done);
+ return `<section class="waiting-panel">
+  <div class="waiting-head"><span class="reading-orb">${AGENT_MARK}</span>
+   <div><h3>${esc(title)}</h3><p>${esc(note)}</p></div></div>
+  <ol class="waiting-steps">${steps.map(([label,done],n)=>
+    `<li class="${done?'done':n===next?'next':'pending'}"><i></i><span>${esc(label)}</span>${n===next?'<b>Next</b>':''}</li>`).join('')}</ol>
+  ${action}</section>`;
+}
+function waitingFor(screen){
+ const vs=Object.values(state.vendors||{});
+ const released=state.rfx_status==='approved';
+ const received=vs.some(v=>v.documents?.length);
+ if(!released)
+  return waitingPanel('Waiting for the request to go out',
+   'Finish the checklist and share your RFx. Everything on this screen is built from what suppliers send back.',
+   next('Start with your requirement.','Open RFx builder','rfx'));
+ if(!received)
+  return waitingPanel('Waiting for supplier responses',
+   'Nothing has arrived yet. Add each reply in whatever format the supplier sent — this screen fills in once they are extracted.',
+   next('Collect the responses first.','Open response inbox','responses'));
+ return waitingPanel('Waiting for extraction',
+  {compare:'Responses are in, but nothing is comparable until they are read and put on one basis.',
+   analysis:'Responses are in. Extract them and every answer here will be calculated from that reviewed data.',
+   award:'Responses are in. Extract them and the award scenarios will be built from the normalized prices.'}[screen]
+   ||'Responses are in and waiting to be read.',
+  next('Run extraction to continue.','Extract responses','responses'));
+}
+function emptyInbox(){
+ const shared=intakeData?.dispatch?.suppliers?.length||0;
+ const released=state.rfx_status==='approved';
+ return `<section class="empty-inbox">
+  <div class="empty-inbox-head">
+   <span class="reading-orb">${AGENT_MARK}</span>
+   <div>
+    <h3>No responses yet</h3>
+    <p>${released
+      ? (shared?`Your request is with ${shared} supplier${shared===1?'':'s'}. Add each reply as it arrives — in whatever format they send.`
+               :'Your request is released. Add each supplier reply as it arrives — in whatever format they send.')
+      : 'Approve and share your RFx first, then supplier replies land here.'}</p>
+   </div>
+  </div>
+  <div class="empty-inbox-formats">${INBOX_FORMATS.map(([name,note])=>
+    `<div><b>${esc(name)}</b><small>${esc(note)}</small></div>`).join('')}</div>
+  <ol class="empty-inbox-steps">
+   <li><b>Add what they sent</b><span>Paste the email or attach the file. Nothing is read yet.</span></li>
+   <li><b>Extract &amp; normalize</b><span>Runs only when you ask, and shows its progress per supplier.</span></li>
+   <li><b>Compare on one basis</b><span>Landed cost in one currency and unit, with every figure traceable.</span></li>
+  </ol>
+ </section>`;
 }
 function processingHtml(){
  if(!activeJob)return '';
