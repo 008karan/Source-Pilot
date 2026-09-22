@@ -6,8 +6,9 @@ let state,health,intakeData,overviewData,history=[],selected=null,filter='all';
 async function api(url,body,method){const r=await fetch(url,{method:method||(body?'POST':'GET'),headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const data=await r.json();if(!r.ok)throw Error(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail));return data}
 function toast(text,error=false){let el=$('#notice');if(!el){el=document.createElement('div');el.id='notice';el.setAttribute('role','status');document.body.append(el)}el.className=error?'error':'';el.textContent=text;el.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.hidden=true,8500)}
 async function busy(button,fn){const b=button;const label=b?.innerHTML;if(b){b.disabled=true;b.textContent='Working…'}try{await fn()}catch(e){toast(e.message,true)}finally{if(b?.isConnected){b.disabled=false;b.innerHTML=label}}}
-function go(view){$$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+view));$$('.navitem').forEach(x=>x.classList.toggle('active',x.dataset.view===view));window.scrollTo(0,0)}
+function go(view){document.body.dataset.view=view;$$('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+view));$$('.navitem').forEach(x=>x.classList.toggle('active',x.dataset.view===view));window.scrollTo(0,0)}
 $$('[data-view]').forEach(b=>b.onclick=()=>go(b.dataset.view));
+document.body.dataset.view=document.querySelector('.view.active')?.id.replace('view-','')||'rfx';
 const pill=(value)=>`<span class="pill ${['pass','fail','pending'].includes(value)?value:''}">${esc(value.replaceAll('_',' '))}</span>`;
 const button=(label,action,extra='',cls='secondary')=>`<button class="${cls}" data-action="${action}" ${extra}>${label}</button>`;
 const panel=(title,subtitle,body)=>`<div class="panel"><div class="panel-head"><div><h2>${title}</h2><p>${subtitle}</p></div></div>${body}</div>`;
