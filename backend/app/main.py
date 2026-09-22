@@ -245,6 +245,16 @@ def award_allocation(request,question):
             'title':request.get('headline') or f'{label}: line allocation','text':text,'segments':{},
             'compared_lines':sorted(awarded),'total_lines':len(data['rfx']['items']),
             'scenario_id':result['id'],'awardable':True,
+            'award_total_inr':result.get('award_total_inr'),
+            'savings_inr':result.get('savings_inr'),'savings_pct':result.get('savings_pct'),
+            'vendor_mix':[{'vendor_id':m['vendor_id'],'vendor_name':m['vendor_name'],'spend':m['spend'],
+                           'share':m['share'],'lines':m['lines'],'units':m['units']}
+                          for m in result.get('vendor_mix',[])],
+            'uncovered':result.get('uncovered_lines') or [],
+            'line_spend':[{'line_no':n,'sku':s,'spend':round(v,2)} for n,s,v in sorted(
+                ((a['line_no'],a['sku'],sum(x['total_cost'] for x in result['allocation'] if x['line_no']==a['line_no']))
+                 for a in {x['line_no']:x for x in result['allocation']}.values()),
+                key=lambda r:-r[2])],
             'dataset_version':result['dataset_version']}
 
 def compare_awards(request,question,allocations=True):

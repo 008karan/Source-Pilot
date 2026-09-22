@@ -380,3 +380,52 @@ body[data-view="analysis"] .analyst-composer{position:sticky;bottom:18px;margin:
  100%{box-shadow:0 0 0 0 #5b46de00}}
 .pulse-focus{animation:pulse-focus 1.1s ease-out 2}
 @media(prefers-reduced-motion:reduce){.pulse-focus{animation:none;outline:2px solid #5B46DE;outline-offset:3px}}
+
+/* ── Analysis answers: the chart leads, the table waits behind a drawer ──── */
+.matrix-details>summary,.allocation-details>summary{cursor:pointer;list-style:none;display:flex;
+ align-items:center;gap:13px;padding:16px 20px;margin-top:20px;border:1px solid var(--line);
+ border-radius:14px;background:#FAF8F5;font-size:17px;font-weight:600;line-height:1.4;color:#171B26;
+ transition:.18s}
+.matrix-details>summary::-webkit-details-marker,
+.allocation-details>summary::-webkit-details-marker{display:none}
+.matrix-details>summary:hover,.allocation-details>summary:hover{border-color:#BFB4F3;background:#F4F1FD}
+.matrix-details>summary:before,.allocation-details>summary:before{content:"";width:9px;height:9px;flex:none;
+ border-right:2.2px solid #5B46DE;border-bottom:2.2px solid #5B46DE;
+ transform:rotate(45deg) translate(-2px,-2px);transition:transform .3s ease}
+.matrix-details[open]>summary:before,.allocation-details[open]>summary:before{
+ transform:rotate(225deg) translate(-2px,-2px)}
+.matrix-details>summary span{margin-left:auto;font-size:15px;font-weight:400;color:#5F6675}
+
+/* The chart toggle says which view you are on. */
+.chart-toggle{display:flex;gap:8px}
+.chart-toggle .small-button.active{background:#5B46DE;border-color:#5B46DE;color:#FFFFFF}
+
+/* Save to Award is a decision, not part of the composer. */
+.save-award{margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
+body[data-view="analysis"] .scenario-result{margin-bottom:26px}
+
+/* ── An allocation answer leads with who gets what, and what it costs ────── */
+.alloc-summary{margin:4px 0 6px}
+.alloc-total{background:#141824;border-radius:16px;padding:20px 24px;margin-bottom:22px}
+.alloc-total small{display:block;background:#141824;color:#A9B1C6;font-size:15px;font-weight:600;
+ text-transform:uppercase;letter-spacing:.05em;line-height:1.45}
+.alloc-total b{display:block;background:#141824;color:#FFFFFF;font-size:28px;font-weight:600;
+ line-height:1.3;margin:7px 0 4px}
+.alloc-total span{display:block;background:#141824;color:#A9B1C6;font-size:16px;line-height:1.45}
+.alloc-summary .chart-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.alloc-summary .chart-heading h3{margin:0;font-size:17px;font-weight:600;line-height:1.4}
+.alloc-bars{display:grid;gap:18px}
+.alloc-bar-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.alloc-bar-head b{font-size:17px;font-weight:600;line-height:1.4;color:#171B26}
+.alloc-bar-head span{font-size:17px;font-weight:600;line-height:1.4;color:#171B26;white-space:nowrap}
+.alloc-bar .split-track{margin:9px 0 7px}
+.alloc-chart{margin-bottom:4px}
+
+/* Where the spend sits, line by line, for whoever opens the detail. */
+.line-spend{margin:20px 0 26px}
+.line-spend h4{margin:0 0 16px;font-size:17px;font-weight:600;line-height:1.4}
+.line-spend-row{margin:12px 0}
+.line-spend-row>div:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.line-spend-row span{font-size:16px;font-weight:600;line-height:1.45;color:#171B26}
+.line-spend-row b{font-size:16px;font-weight:600;line-height:1.45;color:#5F6675;white-space:nowrap}
+.line-spend-row .split-track{margin:7px 0 0;height:8px}

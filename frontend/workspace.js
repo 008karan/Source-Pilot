@@ -78,26 +78,63 @@ renderAnalysis=function(){
   return}
  analysisBase();if(visualAnswer)renderVisual(visualAnswer);};
 const scenarioBase=renderScenario;
-renderScenario=function(s){visualAnswer=null;scenarioBase(s);const root=$('#scenarioResult');if(s.status!=='ok')return;const table=root.querySelector('.table-wrap');if(table){const detail=document.createElement('details');detail.className='allocation-details';detail.innerHTML='<summary>Inspect line-level allocations and evidence</summary>';table.before(detail);detail.append(table)}const mix=root.querySelector('.mix-row');if(mix){mix.insertAdjacentHTML('beforebegin',`<div class="chart-heading"><h3>Award spend by supplier</h3><div>${button('Bars','awardChart','data-chart="bar"','small-button')}${button('Pie','awardChart','data-chart="pie"','small-button')}</div></div><div id="awardChart">${awardChart(s,preferredChart)}</div>`);root.querySelectorAll('.mix-row').forEach(x=>x.remove())}const label=root.querySelector('.panel-head p');if(label){label.textContent=`Data v${s.dataset_version} · ${s.stale?'Needs recomputing':'Current'} · Calculated award`;label.title='The immutable snapshot of your reviewed data this award was calculated from'}};
+renderScenario=function(s){visualAnswer=null;scenarioBase(s);const root=$('#scenarioResult');if(s.status!=='ok')return;const table=root.querySelector('.table-wrap');if(table){const detail=document.createElement('details');detail.className='allocation-details';detail.innerHTML='<summary>Inspect line-level allocations and evidence</summary>';table.before(detail);detail.append(table)}const mix=root.querySelector('.mix-row');if(mix){mix.insertAdjacentHTML('beforebegin',`<div class="chart-heading"><h3>Award spend by supplier</h3><div class="chart-toggle">${button('Bars','awardChart',`data-chart="bar" data-scenario="${s.id}"`,'small-button'+(preferredChart!=='pie'?' active':''))}${button('Pie','awardChart',`data-chart="pie" data-scenario="${s.id}"`,'small-button'+(preferredChart==='pie'?' active':''))}</div></div><div class="award-chart">${awardChart(s,preferredChart)}</div>`);root.querySelectorAll('.mix-row').forEach(x=>x.remove())}const label=root.querySelector('.panel-head p');if(label){label.textContent=`Data v${s.dataset_version} · ${s.stale?'Needs recomputing':'Current'} · Calculated award`;label.title='The immutable snapshot of your reviewed data this award was calculated from'};root.querySelectorAll('.allocation-details').forEach(animateDetails)};
 const colors=['#6d78d8','#7bc7ab','#f0ba78','#ad94d3','#82bed4','#cc8f9d'];
 function bars(points,unit){const numbers=points.filter(p=>p.value!=null),max=Math.max(0,...numbers.map(p=>p.value));return `<div class="visual-bars" role="group" aria-label="${esc(unit)} comparison">${points.map((p,n)=>`<div class="visual-bar-row"><div><span>${esc(p.label)}</span><b>${p.value==null?'Not available':unit==='INR'?money(p.value):esc(p.value)+' '+esc(unit)}</b></div><div class="visual-track"><i style="width:${p.value==null||!max?0:Math.max(1,p.value/max*100)}%;background:${p.leading?'#83cbae':colors[n%colors.length]}"></i></div></div>`).join('')}</div>`}
 function awardChart(s,type){const points=s.vendor_mix.map(m=>({label:m.vendor_name,value:m.spend}));if(type!=='pie')return bars(points,'INR');let angle=0;const slices=s.vendor_mix.map((m,n)=>{const start=angle;angle+=m.spend/s.award_total_inr*360;return `${colors[n%colors.length]} ${start}deg ${angle}deg`});return `<div class="pie-layout"><div class="pie-chart" role="img" aria-label="Award spend shares" style="background:conic-gradient(${slices.join(',')})"><div><b>${money(s.award_total_inr)}</b><small>Total award</small></div></div><div class="chart-legend">${s.vendor_mix.map((m,n)=>`<p><i style="background:${colors[n%colors.length]}"></i><span>${esc(m.vendor_name)}<small>${money(m.spend)}</small></span><b>${(m.spend/s.award_total_inr*100).toFixed(1)}%</b></p>`).join('')}</div></div>`}
 function scenariosHtml(a){
  const points=a.runs.filter(r=>r.award_total_inr!=null).map(r=>({label:r.label,value:r.award_total_inr,leading:r.label===a.best}));
  return (points.length?bars(points,'INR'):'')+`<div class="fact-cards">${a.runs.map(r=>`<div class="fact-card ${r.label===a.best?'criteria-leader':''}"><b>${esc(r.label)}</b><p>${r.award_total_inr!=null?money(r.award_total_inr):esc(r.reason||'No feasible award')}</p>${(r.supplier_mix||[]).map(m=>`<small>${esc(m.name)} · ${(m.share*100).toFixed(0)}% of spend · ${m.lines} line${m.lines===1?'':'s'}</small>`).join('')}${r.allocation?.length?`<details class="allocation-details"><summary>Line by line</summary><div class="table-wrap"><table><thead><tr><th>SKU</th><th>Supplier</th><th>Share</th><th>Units</th><th>Cost</th></tr></thead><tbody>${r.allocation.map(a=>`<tr><td>${esc(a.sku)}</td><td>${esc(a.supplier)}</td><td>${(a.share*100).toFixed(0)}%</td><td>${a.units.toLocaleString('en-IN')}</td><td>${money(a.cost)}</td></tr>`).join('')}</tbody></table></div></details>`:''}${r.uncovered?.length?`<small>Uncovered lines: ${r.uncovered.join(', ')}</small>`:''}${r.status==='ok'&&r.scenario_id?saveToAward(r.scenario_id):''}</div>`).join('')}</div><p class="fine-print">Each strategy solved by the same optimizer on data v${a.dataset_version}. Uncertain prices stay out.</p>`}
+// An allocation answers three things: who is in, what each one gets, what it costs.
+// Those lead; the line-by-line table sits behind a drawer.
+function allocationSummary(a){
+ const mix=a.vendor_mix||[];
+ if(!mix.length||a.award_total_inr==null)return '';
+ const pie=preferredChart==='pie';
+ const slices=(()=>{let angle=0;return mix.map((m,n)=>{const start=angle;angle+=(m.share||0)*360;
+   return `${colors[n%colors.length]} ${start}deg ${angle}deg`})})();
+ const chart=pie
+  ? `<div class="pie-layout"><div class="pie-chart" role="img" aria-label="Share of award by supplier"
+      style="background:conic-gradient(${slices.join(',')})"><div><b>${mix.length}</b><small>suppliers</small></div></div>
+     <div class="chart-legend">${mix.map((m,n)=>`<p><i style="background:${colors[n%colors.length]}"></i><span>${esc(m.vendor_name)}<small>${m.lines} line${m.lines===1?'':'s'}</small></span><b>${((m.share||0)*100).toFixed(1)}%</b></p>`).join('')}</div></div>`
+  : `<div class="alloc-bars">${mix.map((m,n)=>`<div class="alloc-bar">
+      <div class="alloc-bar-head"><b>${esc(m.vendor_name)}</b><span>${money(m.spend)}</span></div>
+      <div class="split-track"><i style="width:${Math.max(2,(m.share||0)*100)}%;background:${colors[n%colors.length]}"></i></div>
+      <div class="split-foot"><span>${((m.share||0)*100).toFixed(1)}% of award</span><span>${m.lines} line${m.lines===1?'':'s'}</span></div>
+     </div>`).join('')}</div>`;
+ return `<div class="alloc-summary">
+   <div class="alloc-total"><small>Total award value</small><b>${money(a.award_total_inr)}</b>
+    <span>${mix.length} supplier${mix.length===1?'':'s'} · ${a.compared_lines?.length||0} of ${a.total_lines} lines${a.savings_pct!=null?` · ${a.savings_pct.toFixed(1)}% under baseline`:''}</span></div>
+   <div class="chart-heading"><h3>What each supplier gets</h3><div class="chart-toggle">${button('Bars','allocChart','data-chart="bar"','small-button'+(pie?'':' active'))}${button('Share','allocChart','data-chart="pie"','small-button'+(pie?' active':''))}</div></div>
+   <div class="alloc-chart">${chart}</div>
+   ${a.uncovered?.length?`<p class="card-warn">Not covered by any eligible supplier: line ${a.uncovered.join(', ')}</p>`:''}
+  </div>`;
+}
 function matrixHtml(a){
  const best=(row,id)=>row.winners.includes(id)&&row.winners.length<a.suppliers.length;
  const bar=(row,cell)=>{if(row.kind!=='number')return '';const nums=a.suppliers.map(s=>row.cells[s.id]?.numeric).filter(n=>n!=null);if(!nums.length||cell.numeric==null)return '';
   const max=Math.max(...nums),min=Math.min(...nums),span=max-min;
   const share=span?(row.better==='low'?(max-cell.numeric)/span:(cell.numeric-min)/span):1;
   return `<div class="matrix-track"><i style="width:${Math.max(6,share*100)}%"></i></div>`};
- return `<div class="table-wrap"><table class="matrix-table"><thead><tr><th>Dimension</th>${a.suppliers.map(s=>`<th>${esc(s.name)}<small>${esc(s.qualification==='pass'?'Qualified':s.qualification==='pending'?'Qualification pending':'Does not qualify')}</small></th>`).join('')}</tr></thead><tbody>${a.rows.map(row=>`<tr><th>${esc(row.label)}<small>${esc(row.note||'')}</small></th>${a.suppliers.map(s=>{const cell=row.cells[s.id]||{};return `<td class="${best(row,s.id)?'criteria-leader':''}">${best(row,s.id)?'<span class="leader-label">✓ Leads</span>':''}${esc(cell.display??'—')}${bar(row,cell)}${cell.detail?`<small>${esc(cell.detail)}</small>`:''}${cell.source?`<small>${esc(cell.source)}</small>`:''}${cell.evidence_id?button('Source ↗','evidence',`data-id="${cell.evidence_id}"`,'small-button'):''}</td>`}).join('')}</tr>`).join('')}</tbody></table></div><p class="fine-print">${a.compared_lines.length} of ${a.total_lines} lines · data v${a.dataset_version} · ✓ marks the ${a.axis==='allocation'?'supplier awarded that line':a.axis==='requirement'?(a.metric==='cost'?'cheapest supplier on that line':'fastest supplier on that line'):'better value in that row'}.</p>`}
+ const long=a.rows.length>5;
+ const lead=a.axis==='allocation'?allocationSummary(a):'';
+ const body=`<div class="table-wrap"><table class="matrix-table"><thead><tr><th>Dimension</th>${a.suppliers.map(s=>`<th>${esc(s.name)}<small>${esc(s.qualification==='pass'?'Qualified':s.qualification==='pending'?'Qualification pending':'Does not qualify')}</small></th>`).join('')}</tr></thead><tbody>${a.rows.map(row=>`<tr><th>${esc(row.label)}<small>${esc(row.note||'')}</small></th>${a.suppliers.map(s=>{const cell=row.cells[s.id]||{};return `<td class="${best(row,s.id)?'criteria-leader':''}">${best(row,s.id)?'<span class="leader-label">✓ Leads</span>':''}${esc(cell.display??'—')}${bar(row,cell)}${cell.detail?`<small>${esc(cell.detail)}</small>`:''}${cell.source?`<small>${esc(cell.source)}</small>`:''}${cell.evidence_id?button('Source ↗','evidence',`data-id="${cell.evidence_id}"`,'small-button'):''}</td>`}).join('')}</tr>`).join('')}</tbody></table></div><p class="fine-print">${a.compared_lines.length} of ${a.total_lines} lines · data v${a.dataset_version} · ✓ marks the ${a.axis==='allocation'?'supplier awarded that line':a.axis==='requirement'?(a.metric==='cost'?'cheapest supplier on that line':'fastest supplier on that line'):'better value in that row'}.</p>`;
+ // Where the money sits by line, for whoever opens the detail.
+ const spend=(a.line_spend||[]).slice(0,10);
+ const peak=Math.max(0,...spend.map(x=>x.spend));
+ const byLine=spend.length>1?`<div class="line-spend"><h4>Largest lines by award value</h4>${spend.map((x,n)=>
+   `<div class="line-spend-row"><div><span>${esc(x.sku||('Line '+x.line_no))}</span><b>${money(x.spend)}</b></div>
+    <div class="split-track"><i style="width:${peak?Math.max(2,x.spend/peak*100):0}%;background:${colors[n%colors.length]}"></i></div></div>`).join('')}
+   ${(a.line_spend||[]).length>spend.length?`<p class="fine-print">Top ${spend.length} of ${a.line_spend.length} lines.</p>`:''}</div>`:'';
+ if(!long)return lead+body;
+ return lead+`<details class="matrix-details"><summary>${a.axis==='allocation'?'See the line-by-line allocation':'See the full '+a.rows.length+'-row comparison'}`
+  +`<span>${a.rows.length} lines · ${a.suppliers.length} supplier${a.suppliers.length===1?'':'s'}</span></summary>${byLine}${body}</details>`}
 // Only when the answer carries a solved allocation — never on prose.
 // The server names it from the constraints it actually solved; a question is a poor title.
 const saveToAward=scenarioId=>scenarioId
  ? `<div class="save-award">${button('Save to Award','saveToAward',`data-scenario="${esc(scenarioId)}"`)}<small>Keeps this allocation as a scenario on the Award screen.</small></div>`
  : '';
-function renderVisual(answer){const root=$('#scenarioResult');root.classList.add('show');root.innerHTML=(answer.question?`<div class="user-message">${esc(answer.question)}</div>`:'')+`<div class="panel"><div class="chat-label" title="The immutable snapshot of your reviewed data this answer was calculated from">✦ EVIDENCE-BASED COMPARISON${answer.dataset_version?' · DATA v'+answer.dataset_version:''}</div><h2>${esc(answer.title)}</h2><p>${esc(answer.text)}</p>${answer.kind==='bar'?bars(answer.points,answer.unit):answer.kind==='status'?`<div class="qualification-cards">${answer.points.map(p=>`<div><b>${esc(p.label)}</b>${pill(p.status)}</div>`).join('')}</div>`:answer.kind==='scenarios'?scenariosHtml(answer):answer.kind==='matrix'?matrixHtml(answer):answer.kind==='facts'?`<div class="fact-cards">${answer.points.map(p=>`<div class="fact-card"><b>${esc(p.label)}</b><p>${esc(p.value)}</p>${p.note?`<small>${esc(p.note)}</small>`:''}${p.evidence_id?button('Source ↗','evidence',`data-id="${p.evidence_id}"`,'small-button'):''}</div>`).join('')}</div>`:''}${answer.awardable&&answer.scenario_id?saveToAward(answer.scenario_id):''}</div>`}
+function renderVisual(answer){const root=$('#scenarioResult');root.classList.add('show');root.innerHTML=(answer.question?`<div class="user-message">${esc(answer.question)}</div>`:'')+`<div class="panel"><div class="chat-label" title="The immutable snapshot of your reviewed data this answer was calculated from">✦ EVIDENCE-BASED COMPARISON${answer.dataset_version?' · DATA v'+answer.dataset_version:''}</div><h2>${esc(answer.title)}</h2><p>${esc(answer.text)}</p>${answer.kind==='bar'?bars(answer.points,answer.unit):answer.kind==='status'?`<div class="qualification-cards">${answer.points.map(p=>`<div><b>${esc(p.label)}</b>${pill(p.status)}</div>`).join('')}</div>`:answer.kind==='scenarios'?scenariosHtml(answer):answer.kind==='matrix'?matrixHtml(answer):answer.kind==='facts'?`<div class="fact-cards">${answer.points.map(p=>`<div class="fact-card"><b>${esc(p.label)}</b><p>${esc(p.value)}</p>${p.note?`<small>${esc(p.note)}</small>`:''}${p.evidence_id?button('Source ↗','evidence',`data-id="${p.evidence_id}"`,'small-button'):''}</div>`).join('')}</div>`:''}${answer.awardable&&answer.scenario_id?saveToAward(answer.scenario_id):''}</div>`;root.querySelectorAll('.matrix-details,.allocation-details').forEach(animateDetails)}
 function keepAnswer(){const answered=$('#scenarioResult')?.innerHTML;
  if(answered&&liveAnswer){analysisThread.push(answered);
   // A chart answer never triggers a full re-render, so the thread grows in place.
@@ -122,7 +159,7 @@ async function askVisually(question){if(!question.trim())throw Error('Enter a qu
   else{visualAnswer={...answer,question};selected=null;renderVisual(visualAnswer)}
   $('.analysis-conversation')?.scrollTo({top:1e6,behavior:'smooth'})}
  catch(e){liveAnswer=null;$('#scenarioResult').innerHTML=`<div class="panel"><h3>We couldn’t complete that request.</h3><p>${esc(e.message)}</p></div>`;throw e}}
-document.addEventListener('click',async e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;const actions=['newRequest','confirmNewRequest','intakeDemo','intakeChat','intakeEdit','intakeConfirm','reviewChecklist','intakeShare','addIntakeLine','removeIntakeLine','removeIntakeFile','newProposal','compareVisual','askNew','askSuggestion','awardChart','newChat'];if(!actions.includes(action))return;e.stopImmediatePropagation();e.preventDefault();await busy(b,async()=>{
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;const actions=['newRequest','confirmNewRequest','intakeDemo','intakeChat','intakeEdit','intakeConfirm','reviewChecklist','intakeShare','addIntakeLine','removeIntakeLine','removeIntakeFile','newProposal','compareVisual','askNew','askSuggestion','awardChart','allocChart','newChat'];if(!actions.includes(action))return;e.stopImmediatePropagation();e.preventDefault();await busy(b,async()=>{
  if(action==='newRequest'){openDrawer(`<h2>Start fresh?</h2><p>Clears the checklist, requirement lines and supplier inbox. Nothing is deleted — this event stays in version history.</p>${button('Yes, start fresh','confirmNewRequest','','primary')}`);return}
  if(action==='confirmNewRequest'){await api('/api/intake/new',{});visualAnswer=null;selected=null;activeJob=null;pendingIntakeFiles=[];sessionStorage.removeItem('aerchain-job');closeDrawer();await refresh();go('rfx');toast('Fresh request started.');return}
  if(action==='intakeDemo'){await api('/api/intake/start',{mode:'demo'});await refresh();return}
@@ -182,7 +219,18 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-acti
  if(action==='newChat'){analysisThread=[];analysisTurns=[];liveAnswer=null;visualAnswer=null;selected=null;askedQuestion='';
   analysisSession=newSessionId();sessionStorage.setItem('aerchain-chat',analysisSession);renderAnalysis();return}
  if(action==='newProposal')return newProposal();
- if(action==='awardChart'){preferredChart=b.dataset.chart;const s=history.find(s=>s.id===selected);if(s)$('#awardChart').innerHTML=awardChart(s,preferredChart);return}
+ if(action==='allocChart'){
+  preferredChart=b.dataset.chart;
+  if(visualAnswer)renderVisual(visualAnswer);
+  return}
+ if(action==='awardChart'){
+  preferredChart=b.dataset.chart;
+  const s=history.find(x=>x.id===(b.dataset.scenario||selected));
+  const host=b.closest('.panel')?.querySelector('.award-chart');
+  if(s&&host)host.innerHTML=awardChart(s,preferredChart);
+  b.parentElement?.querySelectorAll('[data-action="awardChart"]')
+   .forEach(x=>x.classList.toggle('active',x===b));
+  return}
  if(action==='compareVisual'){go('analysis');return askVisually(b.dataset.question)}
  return askVisually(action==='askSuggestion'?b.dataset.question:$('#question').value);
  })},true);
