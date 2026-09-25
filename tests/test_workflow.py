@@ -293,6 +293,16 @@ def test_confirming_an_award_stores_it_against_the_event(client):
     assert client.get('/api/award').json()['award']['id'] == body['id']
 
 
+def test_a_standing_scenario_can_be_awarded_by_the_id_the_screen_shows(client):
+    approve(client)
+    for scenario in client.get('/api/award').json()['scenarios']:
+        if scenario['status'] != 'ok':
+            continue
+        confirmed = client.post('/api/award/confirm', json={'scenario': scenario['id'], 'actor': 'Test buyer'})
+        assert confirmed.status_code == 200, confirmed.text
+        assert confirmed.json()['scenario_id'] == scenario['id']
+
+
 def test_a_saved_scenario_is_flagged_when_the_data_moves_underneath_it(client):
     from backend.app import award
     approve(client)
