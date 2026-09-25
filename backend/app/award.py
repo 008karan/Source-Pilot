@@ -205,7 +205,8 @@ def lowest_cost(data: dict[str, Any]) -> dict[str, Any]:
     if not any(a['supplier_id'] for a in allocation):
         return unavailable(data, 'lowest_cost', 'Lowest cost', 'minimize_cost',
                            'No eligible suppliers are available for award.')
-    return summarise(data, 'lowest_cost', 'Lowest cost', 'minimize_cost', dict(BASE_CONSTRAINTS), allocation)
+    return summarise(data, 'lowest_cost', 'Lowest cost', 'minimize_cost', dict(BASE_CONSTRAINTS), allocation,
+                     scenario_id='lowest_cost')
 
 
 def fastest_delivery(data: dict[str, Any]) -> dict[str, Any]:
@@ -217,7 +218,7 @@ def fastest_delivery(data: dict[str, Any]) -> dict[str, Any]:
         return unavailable(data, 'fastest_delivery', 'Fastest delivery', 'minimize_lead_time',
                            'No eligible suppliers are available for award.')
     scenario = summarise(data, 'fastest_delivery', 'Fastest delivery', 'minimize_lead_time',
-                         dict(BASE_CONSTRAINTS), allocation)
+                         dict(BASE_CONSTRAINTS), allocation, scenario_id='fastest_delivery')
     if scenario['max_lead_time'] is None:
         scenario['notes'] = 'No supplier stated a lead time, so this ranks on landed cost alone.'
     return scenario
@@ -240,7 +241,7 @@ def single_supplier(data: dict[str, Any]) -> dict[str, Any]:
     chosen = min(totals, key=lambda v: totals[v])
     allocation = allocate(data, lambda row, options: chosen)
     return summarise(data, 'single_supplier', 'Single supplier', 'single_supplier',
-                     {**BASE_CONSTRAINTS, 'max_suppliers': 1}, allocation)
+                     {**BASE_CONSTRAINTS, 'max_suppliers': 1}, allocation, scenario_id='single_supplier')
 
 
 def defaults(data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -407,6 +408,9 @@ def remove(scenario_id: str) -> None:
 
 
 def find(data: dict[str, Any], key: str) -> dict[str, Any] | None:
+    # Standing scenarios are rebuilt on every read, so match them by key; an id
+    # handed out by an older build ("lowest_cost:1a2b3c4d") still resolves.
+    key = key.split(':', 1)[0] if key.split(':', 1)[0] in DEFAULT_KEYS else key
     if key in DEFAULT_KEYS:
         return {'lowest_cost': lowest_cost, 'single_supplier': single_supplier,
                 'fastest_delivery': fastest_delivery}[key](data)
